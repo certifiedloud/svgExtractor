@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	var url, class string
+	var url, class, id string
 	app := &cli.App{
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -37,10 +37,10 @@ func main() {
 			if cCtx.String("class") != "" {
 				class = cCtx.String("class")
 			}
-			// if cCtx.String("id") != "" {
-			// 	id = cCtx.String("id")
-			// }
-			svgSources, err := fetchSVGsByClass(url, class)
+			if cCtx.String("id") != "" {
+				id = cCtx.String("id")
+			}
+			svgSources, err := fetchSVGsByClassOrID(url, class, id)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -61,7 +61,7 @@ func main() {
 	}
 }
 
-func fetchSVGsByClass(url, className string) ([]string, error) {
+func fetchSVGsByClassOrID(url, className string, idName string) ([]string, error) {
 	// Create a new context
 	ctx, cancel := chromedp.NewContext(context.Background())
 	defer cancel()
@@ -92,14 +92,31 @@ func fetchSVGsByClass(url, className string) ([]string, error) {
 	findSVG = func(n *html.Node) {
 		if n.Type == html.ElementNode && n.Data == "svg" {
 			// Check if the SVG has the specified class
-			for _, attr := range n.Attr {
-				if attr.Key == "class" && strings.Contains(attr.Val, className) {
-					// Serialize the HTML of the SVG element
-					var sb strings.Builder
-					html.Render(&sb, n)
-					svgSources = append(svgSources, sb.String())
-					break
+			if idName != "" {
+				for _, attr := range n.Attr {
+					if attr.Key == "id" && strings.Contains(attr.Val, idName) {
+						// Serialize the HTML of the SVG element
+						var sb strings.Builder
+						html.Render(&sb, n)
+						svgSources = append(svgSources, sb.String())
+						break
+					}
 				}
+			}
+			if className != "" {
+				for _, attr := range n.Attr {
+					if attr.Key == "class" && strings.Contains(attr.Val, className) {
+						var sb strings.Builder
+						html.Render(&sb, n)
+						svgSources = append(svgSources, sb.String())
+						break
+					}
+				}
+			} else if idName == "" && className == "" {
+				// Just get all SVGs
+				var sb strings.Builder
+				html.Render(&sb, n)
+				svgSources = append(svgSources, sb.String())
 			}
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
