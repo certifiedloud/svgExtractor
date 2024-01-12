@@ -8,10 +8,8 @@ import (
 	"os"
 	"strings"
 
-	// "time"
 
 	"github.com/chromedp/chromedp"
-	// "github.com/gostaticanalysis/nilerr"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/net/html"
 )
